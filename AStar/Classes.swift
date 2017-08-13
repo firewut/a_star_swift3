@@ -1,7 +1,7 @@
 import Foundation
 import SceneKit
 
-var node_chance_to_be_wall = 10
+var node_chance_to_be_wall = 20
 
 var node_width: CGFloat = 10,
 node_height: CGFloat = 10,
@@ -164,24 +164,6 @@ class _Grid {
         var neighbors: [Node] = []
         
         for _node in self.Nodes {
-            // Top
-            if _node.Row == node.Row - 1 && _node.Column == node.Column {
-                neighbors.append(_node)
-            }
-            // Bottom
-            if _node.Row == node.Row + 1 && _node.Column == node.Column {
-                neighbors.append(_node)
-            }
-            // Left
-            if _node.Row == node.Row && _node.Column == node.Column - 1 {
-                neighbors.append(_node)
-            }
-            // Right
-            if _node.Row == node.Row && _node.Column == node.Column + 1 {
-                neighbors.append(_node)
-            }
-            
-            
             // Top Left
             if _node.Row == node.Row - 1 && _node.Column == node.Column - 1 {
                 neighbors.append(_node)
@@ -198,21 +180,41 @@ class _Grid {
             if _node.Row == node.Row + 1 && _node.Column == node.Column + 1 {
                 neighbors.append(_node)
             }
+            // Top
+            if _node.Row == node.Row - 1 && _node.Column == node.Column {
+                neighbors.append(_node)
+            }
+            // Bottom
+            if _node.Row == node.Row + 1 && _node.Column == node.Column {
+                neighbors.append(_node)
+            }
+            // Left
+            if _node.Row == node.Row && _node.Column == node.Column - 1 {
+                neighbors.append(_node)
+            }
+            // Right
+            if _node.Row == node.Row && _node.Column == node.Column + 1 {
+                neighbors.append(_node)
+            }
         }
         return neighbors
     }
     
-    func distance(node_a: Node, node_b: Node) -> Float {
+    func distance(_ a: Node, _ b: Node) -> Float {
         let d = sqrt(
-            Float((node_a.Column - node_b.Column) << 1) +
-                Float((node_a.Row - node_a.Row) << 1)
+            Float(
+                pow(Float(a.Column - b.Column), 2)
+            ) +
+            Float(
+                pow(Float(a.Row - a.Row), 2)
+            )
         )
         
         return d
     }
     
-    func heuristic(node_a: Node, node_b: Node) -> Float {
-        return self.distance(node_a: node_a, node_b: node_b)
+    func heuristic(_ a: Node, _ b: Node) -> Float {
+        return self.distance(a, b)
     }
     
     
@@ -288,7 +290,7 @@ class _Grid {
                     }
                     
                     if closer_neighbor_found {
-                        neighbor.h = self.heuristic(node_a: neighbor, node_b: self.End!)
+                        neighbor.h = self.heuristic(neighbor, self.End!)
                         neighbor.f = neighbor.f + neighbor.g
                         neighbor.previous = current
                     }
