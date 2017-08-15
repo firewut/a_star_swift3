@@ -1,7 +1,7 @@
 import Foundation
 import SceneKit
 
-var node_chance_to_be_wall = 20
+var node_chance_to_be_wall = 10
 
 var node_width: CGFloat = 10,
 node_height: CGFloat = 10,
@@ -10,8 +10,10 @@ node_chamferRadius: CGFloat = 0,
 node_spacing: CGFloat = 5
 
 class Node: Comparable {
-    var Row: Int = 0
-    var Column: Int = 0
+    var Y: Int = 0,
+        X: Int = 0,
+        Z: Int = 0
+    
     
     var Neighbors: [Node] = []
     
@@ -29,9 +31,11 @@ class Node: Comparable {
     
     var scn_node: SCNNode?
     
-    init(row: Int, column: Int) {
-        self.Row = row
-        self.Column = column
+    init(x: Int, y: Int, z: Int) {
+        self.X = x
+        self.Y = y
+        self.Z = z
+        
         self.is_wall = Int.random(range: 0..<100) < node_chance_to_be_wall
     }
     
@@ -51,7 +55,7 @@ class Node: Comparable {
     }
     
     func description() -> String {
-        return "\(self.Row)-\(self.Column)"
+        return "\(self.Y)-\(self.X)-\(self.Z)"
     }
     
     func get_geometry() -> SCNGeometry {
@@ -68,14 +72,16 @@ class Node: Comparable {
     func set_geometry_materials() {
         if let scn_node = self.scn_node {
             if let geometry = scn_node.geometry {
+                geometry.materials.first?.transparency = 1
                  if self.is_start || self.is_end {
-                    geometry.materials.first?.diffuse.contents = UIColor.blue
-                } else if self.is_path_item {
                     geometry.materials.first?.diffuse.contents = UIColor.red
+                } else if self.is_path_item {
+                    geometry.materials.first?.diffuse.contents = UIColor.orange
                 } else if self.is_wall {
-                    geometry.materials.first?.diffuse.contents = UIColor.white
+                    geometry.materials.first?.diffuse.contents = UIColor.gray
                 } else {
                     geometry.materials.first?.diffuse.contents = UIColor.clear
+//                    geometry.materials.first?.transparency = 0.2
                 }
             }
         }
@@ -102,8 +108,10 @@ class Node: Comparable {
 }
 
 class _Grid {
-    var Rows: Int = 0
-    var Columns: Int = 0
+    var Rows: Int = 0,
+        Columns: Int = 0,
+        Depth: Int = 0
+    
     var Nodes: [Node] = []
     
     var Start: Node?
@@ -115,9 +123,10 @@ class _Grid {
     
     var path: [Node] = []
     
-    init(_ rows: Int, _ columns: Int) {
+    init(_ rows: Int, _ columns: Int, _ depth: Int) {
         self.Rows = rows
         self.Columns = columns
+        self.Depth = depth
         
         self.path = []
         self.Nodes = []
@@ -130,21 +139,32 @@ class _Grid {
         }
         
         // Chose start and end nodes
-        let random_start_col = Int.random(range: 0..<columns)
-        let random_end_col = Int.random(range: 0..<columns)
+        let random_start_x = Int.random(range: 0..<columns)
+        let random_start_z = Int.random(range: 0..<depth)
+        let random_end_x = Int.random(range: 0..<columns)
+        let random_end_z = Int.random(range: 0..<depth)
         
         // Append new nodes
         for row in 0..<rows {
             for column in 0..<columns {
-                let node = Node(row: row, column: column)
-                self.Nodes.append(
-                    node
-                )
-                if row == 0 && column == random_start_col {
-                    _ = self._setStart(node)
-                }
-                if row == rows - 1 && column == random_end_col {
-                    _ = self._setEnd(node)
+                for _depth in 0..<depth {
+                    let node = Node(
+                        x: column,
+                        y: row,
+                        z: _depth)
+                    self.Nodes.append(
+                        node
+                    )
+                    if row == 0 &&
+                        column == random_start_x &&
+                        _depth == random_start_z {
+                        _ = self._setStart(node)
+                    }
+                    if row == rows - 1 &&
+                        column == random_end_x &&
+                        _depth == random_end_z {
+                        _ = self._setEnd(node)
+                    }
                 }
             }
         }
@@ -163,38 +183,18 @@ class _Grid {
     func get_node_neighbors(node: Node) -> [Node] {
         var neighbors: [Node] = []
         
+        // O(3^n)
         for _node in self.Nodes {
-            // Top Left
-            if _node.Row == node.Row - 1 && _node.Column == node.Column - 1 {
-                neighbors.append(_node)
-            }
-            // Top Right
-            if _node.Row == node.Row - 1 && _node.Column == node.Column + 1 {
-                neighbors.append(_node)
-            }
-            // Bottom Left
-            if _node.Row == node.Row + 1 && _node.Column == node.Column - 1 {
-                neighbors.append(_node)
-            }
-            // Bottom Right
-            if _node.Row == node.Row + 1 && _node.Column == node.Column + 1 {
-                neighbors.append(_node)
-            }
-            // Top
-            if _node.Row == node.Row - 1 && _node.Column == node.Column {
-                neighbors.append(_node)
-            }
-            // Bottom
-            if _node.Row == node.Row + 1 && _node.Column == node.Column {
-                neighbors.append(_node)
-            }
-            // Left
-            if _node.Row == node.Row && _node.Column == node.Column - 1 {
-                neighbors.append(_node)
-            }
-            // Right
-            if _node.Row == node.Row && _node.Column == node.Column + 1 {
-                neighbors.append(_node)
+            if _node != node {
+                if (node.X-1...node.X+1).contains(_node.X) {
+                    if (node.Y-1...node.Y+1).contains(_node.Y) {
+                        if (node.Z-1...node.Z+1).contains(_node.Z) {
+                            neighbors.append(
+                                _node
+                            )
+                        }
+                    }
+                }
             }
         }
         return neighbors
@@ -203,10 +203,13 @@ class _Grid {
     func distance(_ a: Node, _ b: Node) -> Float {
         let d = sqrt(
             Float(
-                pow(Float(a.Column - b.Column), 2)
+                pow(Float(a.X - b.X), 2)
             ) +
             Float(
-                pow(Float(a.Row - a.Row), 2)
+                pow(Float(a.Y - a.Y), 2)
+            ) +
+            Float(
+                pow(Float(a.Z - a.Z), 2)
             )
         )
         
@@ -317,9 +320,9 @@ class _Grid {
             if node.scn_node == nil {
                 let _scn_node = node.get_scn_node()
                 _scn_node.position = SCNVector3Make(
-                    Float(CGFloat(node.Column) * node_width),
-                    Float(CGFloat(self.Rows - node.Row) * node_height),
-                    0
+                    Float(CGFloat(node.X) * node_width),
+                    Float(CGFloat(self.Rows - node.Y) * node_height),
+                    Float(CGFloat(self.Depth - node.Z) * node_lenght)
                 )
                 node.set_scn_node(_scn_node)
             }

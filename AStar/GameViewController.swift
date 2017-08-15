@@ -12,14 +12,14 @@ import SceneKit
 
 class GameViewController: UIViewController, SCNSceneRendererDelegate {
     
-    var rows: Int = 20,
-        cols: Int = 20
+    var rows: Int = 7,
+        cols: Int = 7,
+        depth: Int = 7
     
     var gridView: SCNView!,
         gridScene: SCNScene!
-//        cameraNode: SCNNode!
     
-    var grid = _Grid(0,0)
+    var grid = _Grid(0, 0, 0)
     
     func initView(){
         self.gridView = self.view as! SCNView
@@ -40,7 +40,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         super.viewDidLoad()
         
         
-        self.grid = _Grid(rows, cols)
+        self.grid = _Grid(rows, cols, depth)
 
         self.initView()
         self.initScene()
@@ -86,7 +86,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     }
     
     override var shouldAutorotate: Bool {
-        return false
+        return true
     }
     
     override var prefersStatusBarHidden: Bool {
